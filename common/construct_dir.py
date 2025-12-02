@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
 LINE_SOLVER_TEMPLATE = """from common.line_solver import LineSolver, AbstractLineByLineSolution
 
-
+FileConfigType = None
 LineDataType = ...
 
 
@@ -39,7 +39,7 @@ def parse_line(line: str) -> LineDataType:
     ...
 
 
-class Part1Solution(AbstractLineByLineSolution[LineDataType]):
+class Part1Solution(AbstractLineByLineSolution[LineDataType, FileConfigType]):
     def __init__(self) -> None:
         ...
 
@@ -50,7 +50,7 @@ class Part1Solution(AbstractLineByLineSolution[LineDataType]):
         ...
 
 
-class Part2Solution(AbstractLineByLineSolution[LineDataType]):
+class Part2Solution(AbstractLineByLineSolution[LineDataType, FileConfigType]):
     def __init__(self) -> None:
         ...
 

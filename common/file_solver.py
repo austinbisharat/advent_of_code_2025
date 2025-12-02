@@ -26,7 +26,7 @@ class FileSolver(Generic[T]):
         log_func: Callable[[Any], None] = print
     ) -> 'FileSolver[T]':
         return cls(
-            file_names=[f'sample_{day_number}.txt', f'input_{day_number}.txt'],
+            file_names=[f'sample_{day_number:02d}.txt', f'input_{day_number:02d}.txt'],
             loader=loader,
             solutions=solutions,
             log_func=log_func
