@@ -1,5 +1,5 @@
 import math
-from typing import TextIO, cast
+from typing import TextIO, cast, Iterable
 
 from common.file_solver import FileSolver
 
@@ -17,67 +17,81 @@ def load(file: TextIO) -> LoadedDataType:
 def solve_pt1(data: LoadedDataType) -> int:
     # Assumes the ranges do not overlap
     return sum(
-        _sum_simple_invalid_ids_in_range(id_range)
+        _sum_invalid_ids_for_num_digits_and_repetitions(id_range, num_digits, 2)
         for id_range in data
+        for num_digits in _get_num_digits_to_consider_for_id_range(id_range)
+        if num_digits % 2 == 0
     )
 
 
 def solve_pt2(data: LoadedDataType) -> int:
-    return sum(
-        _sum_complex_invalid_ids_in_range(id_range)
-        for id_range in data
-    )
-
-
-def _sum_simple_invalid_ids_in_range(id_range: tuple[int, int]) -> int:
-    lo, hi = id_range
-    lo_digits, hi_digits = int(math.log10(lo)) + 1, int(math.log10(hi)) + 1
-    return sum(
-        _sum_invalid_ids_for_num_digits_and_repetitions(id_range, num_digits, 2)
-        for num_digits in range(lo_digits, hi_digits + 1)
-    )
-
-
-def _sum_complex_invalid_ids_in_range(id_range: tuple[int, int]) -> int:
-    lo, hi = id_range
-    lo_digits, hi_digits = int(math.log10(lo)) + 1, int(math.log10(hi)) + 1
+    # Assumes the given ranges do not overlap
     return sum(
         _sum_complex_invalid_ids_in_range_for_num_digits(id_range, num_digits)
-        for num_digits in range(lo_digits, hi_digits + 1)
+        for id_range in data
+        for num_digits in _get_num_digits_to_consider_for_id_range(id_range)
     )
+
+def _get_num_digits_to_consider_for_id_range(id_range: tuple[int, int]) -> Iterable[int]:
+    lo_digit_count, hi_digit_count = map(lambda x: int(math.log10(x)) + 1, id_range)
+    return range(lo_digit_count, hi_digit_count + 1)
 
 
 def _sum_complex_invalid_ids_in_range_for_num_digits(id_range: tuple[int, int], num_digits: int) -> int:
     sums_by_repetition_length = dict()
     total = 0
-    for rep_len in range(1, num_digits//2 + 1):
-        if num_digits % rep_len != 0:
+    for repetition_len in range(1, num_digits//2 + 1):
+        if num_digits % repetition_len != 0:
             continue
-        cur_sum = _sum_invalid_ids_for_num_digits_and_repetitions(id_range, num_digits, num_digits // rep_len)
+
+        cur_sum = _sum_invalid_ids_for_num_digits_and_repetitions(id_range, num_digits, num_digits // repetition_len)
         total += cur_sum
-        for prev_rep_len, value in sums_by_repetition_length.items():
-            if rep_len % prev_rep_len != 0:
-                continue
-            total -= value
-        sums_by_repetition_length[rep_len] = cur_sum
+
+        for prev_repetition_len, value in sums_by_repetition_length.items():
+            # If the current repetition length is a logical superset of a previous repetition length,
+            # we need to remove the prev repetition length's sum from our total sum. Notably, this
+            # might happen multiple times. For example, when num_digits = 10, we will subtract the
+            # value for repetition_len == 1 twice, since that set of invalid ids will be logically
+            # contained by the sets of invalid ids with repetition_len 2 AND 5
+            if repetition_len % prev_repetition_len == 0:
+                total -= value
+        sums_by_repetition_length[repetition_len] = cur_sum
     return total
 
 
 def _sum_invalid_ids_for_num_digits_and_repetitions(id_range: tuple[int, int], num_digits: int, num_repetitions: int) -> int:
     lo, hi = id_range
-    if num_digits % num_repetitions != 0:
-        return 0
 
-    incrementor = sum(
+    # All invalid IDs of the given repetition length will be divisible by this step value. Some examples:
+    # - num_digits = 2, num_repetitions = 2 -> step should be 11
+    # - num_digits = 4, num_repetitions = 2 -> step should be 1010
+    # - num_digits = 6, num_repetitions = 2 -> step should be 100100
+    # - num_digits = 6, num_repetitions = 3 -> step should be 101010
+    step = sum(
         10 ** (num_digits // num_repetitions * i)
         for i in range(num_repetitions)
     )
-    lo_val_for_digit_range = max(lo, 10 ** (num_digits - 1))
-    start = ((lo_val_for_digit_range + incrementor - 1) // incrementor) * incrementor
-    end = (min(hi, 10 ** num_digits)) // incrementor * incrementor
-    if start > end:
-        return 0
-    return (start + end) * ((end - start) // incrementor + 1) // 2
+
+    # Get the min and max of the range for the current number of digits we're considering
+    min_id_for_num_digits = max(lo, 10 ** (num_digits - 1))
+    max_id_for_num_digits = min(hi, 10 ** num_digits)
+
+    # Round UP to the next multiple of step to get the first invalid id
+    min_invalid_id = (min_id_for_num_digits + step - 1) // step * step
+
+    # Round DOWN to the next multiple of step to get the last invalid id
+    max_invalid_id = max_id_for_num_digits // step * step
+
+    return _sum_arithmetic_sequence(min_invalid_id, max_invalid_id, step)
+
+def _sum_arithmetic_sequence(start: int, end: int, step: int) -> int:
+    """
+    Sums arithmetic sequence
+
+    Start and end are inclusive. Assumes end-start is divisible by step.
+    """
+    num_elements = (end - start) // step + 1
+    return (start + end) *  num_elements // 2
 
 
 if __name__ == "__main__":
