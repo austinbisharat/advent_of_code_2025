@@ -1,5 +1,4 @@
 import abc
-import io
 from numbers import Number
 from typing import Generic, TypeVar, Callable, Type, Any, TextIO, Optional, Iterable
 
@@ -72,7 +71,7 @@ class StreamingSolver(Generic[ItemDataType, FileConfigType]):
         solutions: list[Type[AbstractItemStreamingSolution[ItemDataType, FileConfigType]]],
         file_config_parser: Optional[Callable[[TextIO], FileConfigType]] = None,
         log_func: Callable[[Any], None] = print,
-        item_delimiter: str = '\n',
+        item_delimiter: str | None = None,
     ) -> None:
         self._file_names = file_names
         self._item_parser = item_parser
@@ -88,7 +87,8 @@ class StreamingSolver(Generic[ItemDataType, FileConfigType]):
         item_parser: Callable[[str], ItemDataType],
         solutions: list[Type[AbstractItemStreamingSolution[ItemDataType, FileConfigType]]],
         file_config_parser: Optional[Callable[[TextIO], FileConfigType]] = None,
-        log_func: Callable[[Any], None] = print
+        log_func: Callable[[Any], None] = print,
+        item_delimiter: str | None = None,
     ) -> 'StreamingSolver[ItemDataType, FileConfigType]':
         return cls(
             file_names=[f'sample_{day_number:02d}.txt', f'input_{day_number:02d}.txt'],
@@ -96,6 +96,7 @@ class StreamingSolver(Generic[ItemDataType, FileConfigType]):
             solutions=solutions,
             file_config_parser=file_config_parser,
             log_func=log_func,
+            item_delimiter=item_delimiter,
         )
 
     def solve_all(self) -> None:
@@ -112,7 +113,7 @@ class StreamingSolver(Generic[ItemDataType, FileConfigType]):
                 for solution in solutions:
                     solution.load_config(file_config)
 
-            for item in f:
+            for item in self._stream_items_from_file(f):
                 self._process_item(item, solutions)
 
         for i, solution in enumerate(solutions):
@@ -120,8 +121,8 @@ class StreamingSolver(Generic[ItemDataType, FileConfigType]):
             self._log_func(f'\tSolution for part {i + 1}: {result}')
         self._log_func(f'Done.\n')
 
-    def _stream_items_from_file(self, file: io.FileIO, chunk_size=256) -> Iterable[str]:
-        if self._item_delimiter == '\n':
+    def _stream_items_from_file(self, file: TextIO, chunk_size=256) -> Iterable[str]:
+        if self._item_delimiter is None:
             yield from file
             return
 
@@ -132,7 +133,7 @@ class StreamingSolver(Generic[ItemDataType, FileConfigType]):
                 break
 
             buffer += chunk
-            while pos := buffer.find(self._item_delimiter) != -1:
+            while (pos := buffer.find(self._item_delimiter)) != -1:
                 yield buffer[:pos]
                 buffer = buffer[pos + len(self._item_delimiter):]
 

@@ -1,34 +1,27 @@
 import math
-from typing import TextIO, cast, Iterable
+from typing import cast, Iterable
 
-from common.file_solver import FileSolver
-
-
-LoadedDataType = list[tuple[int, int]]
+from common.streaming_solver import StreamingSolver, create_summing_solution
 
 
-def load(file: TextIO) -> LoadedDataType:
-    return [
-        cast(tuple[int, int], tuple(map(int, range_str.strip().split("-"))))
-        for range_str in file.read().strip().split(',')
-    ]
+LoadedDataType = tuple[int, int]
 
+def parse_item(item_str: str) -> tuple[int, int]:
+    return cast(tuple[int, int], tuple(map(int, item_str.strip().split("-"))))
 
-def solve_pt1(data: LoadedDataType) -> int:
-    # Assumes the ranges do not overlap
+def solve_pt1(id_range: LoadedDataType) -> int:
+    # Assumes the provided id_ranges do not overlap
     return sum(
         _sum_invalid_ids_for_num_digits_and_repetitions(id_range, num_digits, 2)
-        for id_range in data
         for num_digits in _get_num_digits_to_consider_for_id_range(id_range)
         if num_digits % 2 == 0
     )
 
 
-def solve_pt2(data: LoadedDataType) -> int:
+def solve_pt2(id_range: LoadedDataType) -> int:
     # Assumes the given ranges do not overlap
     return sum(
         _sum_complex_invalid_ids_in_range_for_num_digits(id_range, num_digits)
-        for id_range in data
         for num_digits in _get_num_digits_to_consider_for_id_range(id_range)
     )
 
@@ -95,8 +88,13 @@ def _sum_arithmetic_sequence(start: int, end: int, step: int) -> int:
 
 
 if __name__ == "__main__":
-    FileSolver[LoadedDataType].construct_for_day(
+
+    StreamingSolver[LoadedDataType, None].construct_for_day(
         day_number=2,
-        loader=load,
-        solutions=[solve_pt1, solve_pt2]
+        item_parser=parse_item,
+        solutions=[
+            create_summing_solution(solve_pt1),
+            create_summing_solution(solve_pt2),
+        ],
+        item_delimiter=',',
     ).solve_all()
