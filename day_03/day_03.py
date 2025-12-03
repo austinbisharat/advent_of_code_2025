@@ -1,3 +1,5 @@
+from operator import itemgetter
+
 from common.streaming_solver import StreamingSolver, create_summing_solution
 
 
@@ -14,14 +16,14 @@ def part_one(data: LineDataType) -> int:
 def part_two(data: LineDataType) -> int:
     return _get_largest_joltage_from_bank(data, 12)
 
-def _get_largest_joltage_from_bank(bank: LineDataType, num_remaining_digits: int, result_so_far: int = 0) -> int:
-    if num_remaining_digits == 0:
-        return result_so_far
-    num_remaining_digits -= 1
-    possible_next_digits = bank[:len(bank) - num_remaining_digits]
-    first_digit_index, first_digit = max(enumerate(possible_next_digits), key=lambda pair: pair[1])
-    result_so_far = result_so_far * 10 + first_digit
-    return _get_largest_joltage_from_bank(bank[first_digit_index + 1:], num_remaining_digits, result_so_far)
+def _get_largest_joltage_from_bank(bank: LineDataType, num_digits: int) -> int:
+    result = 0
+    digit_idx = -1
+    for i in range(1, num_digits+1):
+        possible_next_digits = bank[digit_idx+1:len(bank) - (num_digits - i)]
+        digit_idx, next_digit = max(enumerate(possible_next_digits), key=itemgetter(1))
+        result = 10 * result + next_digit
+    return result
 
 
 if __name__ == "__main__":
