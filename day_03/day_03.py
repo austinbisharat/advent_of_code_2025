@@ -20,12 +20,12 @@ def part_two(data: LineDataType) -> int:
 
 def _get_largest_joltage_from_bank(bank: list[int], num_batteries_to_use: int) -> int:
     q = deque()
-    for i, bank_value in enumerate(bank):
+    for i, battery_value in enumerate(bank):
         num_digits_left_in_bank = len(bank) - i
-        while q and q[-1] < bank_value and (len(q) + num_digits_left_in_bank) > num_batteries_to_use:
+        while q and q[-1] < battery_value and (len(q) + num_digits_left_in_bank) > num_batteries_to_use:
             q.pop()
 
-        q.append(bank_value)
+        q.append(battery_value)
 
     if len(q) < num_batteries_to_use:
         raise ValueError('No more banks to use')
