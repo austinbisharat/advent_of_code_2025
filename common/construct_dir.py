@@ -29,32 +29,32 @@ if __name__ == "__main__":
     ).solve_all()
 """
 
-LINE_SOLVER_TEMPLATE = """from common.line_solver import LineSolver, AbstractLineByLineSolution
+STREAMING_SOLVER_TEMPLATE = """from common.streaming_solver import StreamingSolver, AbstractItemStreamingSolution
 
 FileConfigType = None
 LineDataType = ...
 
 
-def parse_line(line: str) -> LineDataType:
+def parse_item(item_str: str) -> LineDataType:
     ...
 
 
-class Part1Solution(AbstractLineByLineSolution[LineDataType, FileConfigType]):
+class Part1Solution(AbstractItemStreamingSolution[LineDataType, FileConfigType]):
     def __init__(self) -> None:
         ...
 
-    def process_line(self, line: LineDataType) -> None:
+    def process_item(self, line: LineDataType) -> None:
         ...
 
     def result(self) -> int:
         ...
 
 
-class Part2Solution(AbstractLineByLineSolution[LineDataType, FileConfigType]):
+class Part2Solution(AbstractItemStreamingSolution[LineDataType, FileConfigType]):
     def __init__(self) -> None:
         ...
 
-    def process_line(self, line: LineDataType) -> None:
+    def process_item(self, line: LineDataType) -> None:
         ...
 
     def result(self) -> int:
@@ -62,20 +62,20 @@ class Part2Solution(AbstractLineByLineSolution[LineDataType, FileConfigType]):
 
 
 if __name__ == "__main__":
-    LineSolver[LineDataType].construct_for_day(
+    StreamingSolver[LineDataType].construct_for_day(
         day_number={day_num},
-        line_parser=parse_line,
+        item_parser=parse_item,
         solutions=[Part1Solution, Part2Solution]
     ).solve_all()
 """
 
-SUMMING_TEMPLATE = """from common.line_solver import LineSolver, create_summing_solution
+SUMMING_TEMPLATE = """from common.streaming_solver import StreamingSolver, create_summing_solution
 
 
 LineDataType = ...
 
 
-def parse_line(line: str) -> LineDataType:
+def parse_item(item_str: str) -> LineDataType:
     ...
 
 
@@ -88,9 +88,9 @@ def part_two(data: LineDataType) -> int:
 
 
 if __name__ == "__main__":
-    LineSolver[LineDataType].construct_for_day(
+    StreamingSolver[LineDataType, None].construct_for_day(
         day_number={day_num},
-        line_parser=parse_line,
+        item_parser=parse_item,
         solutions=[
             create_summing_solution(part_one),
             create_summing_solution(part_two)
@@ -100,7 +100,7 @@ if __name__ == "__main__":
 
 TEMPLATES = {
     'FILE': FULL_FILE_SOLVER_TEMPLATE,
-    'LINE': LINE_SOLVER_TEMPLATE,
+    'STREAMING': STREAMING_SOLVER_TEMPLATE,
     'SUMMING': SUMMING_TEMPLATE,
 }
 
@@ -121,7 +121,11 @@ def construct_dir(
 if __name__ == '__main__':
     day_number = input("Enter day number: ")
     templates = '\n\t'.join(TEMPLATES.keys())
-    template_name = input(f"Template Options:\n\t{templates}\nEnter template name: ")
+    template_name = input(f"Template Options:\n\t{templates}\nEnter template name: ").strip().upper()
+
+    if not template_name:
+        template_name = 'STREAMING'
+
     flag = input('Enter template flag (w=overwrite, x=create_or_err): ')
     construct_dir(
         day_number=int(day_number),
