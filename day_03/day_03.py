@@ -22,16 +22,24 @@ def _get_largest_joltage_from_bank(bank: list[int], num_batteries_to_use: int) -
     q = deque()
     for i, battery_value in enumerate(bank):
         num_digits_left_in_bank = len(bank) - i
-        while q and q[-1] < battery_value and (len(q) + num_digits_left_in_bank) > num_batteries_to_use:
+        while all((
+            q,
+            q[-1] < battery_value,
+            (len(q) + num_digits_left_in_bank) > num_batteries_to_use,
+        )):
             q.pop()
 
         q.append(battery_value)
 
-    if len(q) < num_batteries_to_use:
-        raise ValueError('No more banks to use')
+
 
     result = 0
     for _ in range(num_batteries_to_use):
+        if not q:
+            # Not clear what ought to happen in this case. Can only really occur
+            # either if there's a bug above OR len(bank) > num_batteries_to_use,
+            # which doesn't occur in the given input.
+            break
         result = result * 10 + q.popleft()
     return result
 

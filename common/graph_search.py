@@ -118,7 +118,7 @@ class GraphSearcher(abc.ABC, Generic[NodeType]):
         self,
         node: NodeType,
         cost_to_travel_to_node: float = 0.0,
-        prev_node: Optional[_QueueNode[[NodeType]]] = None,
+        prev_node: Optional[_QueueNode[NodeType]] = None,
     ) -> _QueueNode[NodeType]:
         return _QueueNode(
             priority=cost_to_travel_to_node + self.heuristic(node),

@@ -1,4 +1,5 @@
 import collections
+import copy
 import enum
 import itertools
 from typing import Generic, TypeVar, Sequence, TextIO, cast, Optional, Iterable, Callable, Self, Hashable, Protocol
@@ -56,6 +57,9 @@ class Grid(Generic[T]):
     @classmethod
     def create_empty_grid(cls, height: int, width: int) -> 'Grid[Optional[T]]':
         return Grid([[None for _ in range(width)] for _ in range(height)])
+
+    def copy(self) -> Self:
+        return copy.deepcopy(self)
 
     def is_valid_point(self, point: PositionType) -> bool:
         row, col = point
