@@ -1,3 +1,4 @@
+import time
 from typing import Generic, TypeVar, Callable, TextIO, Any
 
 T = TypeVar('T')
@@ -43,6 +44,10 @@ class FileSolver(Generic[T]):
             data = self._loader(f)
 
         for i, solution in enumerate(self._solutions):
+            start_time = time.perf_counter()
             result = solution(data)
-            self._log_func(f'\tSolution for part {i + 1}: {result}')
+            end_time = time.perf_counter()
+
+            execution_time = end_time - start_time
+            self._log_func(f'\tSolution for part {i + 1} (runtime={execution_time:0.2f}s): {result}')
         self._log_func('')

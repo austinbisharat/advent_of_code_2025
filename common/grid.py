@@ -55,8 +55,8 @@ class Grid(Generic[T]):
             self.width = len(grid[0])
 
     @classmethod
-    def create_empty_grid(cls, height: int, width: int) -> 'Grid[Optional[T]]':
-        return Grid([[None for _ in range(width)] for _ in range(height)])
+    def create_empty_grid(cls, height: int, width: int, default_cell_value: T) -> 'Grid[T]':
+        return Grid([[default_cell_value for _ in range(width)] for _ in range(height)])
 
     def copy(self) -> Self:
         return copy.deepcopy(self)
@@ -131,6 +131,9 @@ class Grid(Generic[T]):
             ''.join(format_val(self[row_idx, col_idx]) for col_idx in range(self.width))
             for row_idx in range(self.height)
         )
+
+    def __str__(self) -> str:
+        return self.format_str()
 
 
 class SparseGrid(Grid[T]):
