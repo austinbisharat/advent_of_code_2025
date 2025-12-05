@@ -1,24 +1,25 @@
 import bisect
 import itertools
 from collections import deque
-from typing import TextIO, Iterable
+from typing import TextIO, Iterable, cast
 
+from common.file_solver import FileSolver
 from common.streaming_solver import StreamingSolver, AbstractItemStreamingSolution
 
-FileConfigType = list[tuple[int, int]]
-LineDataType = int
 
-def load_config(file: TextIO) -> FileConfigType:
+def parse_ranges(file: TextIO) -> list[tuple[int, int]]:
     q = deque()
-
     for line in file:
         if not line.strip():
             return list(q)
-        q.append(tuple(map(int, line.strip().split("-"))))
+        q.append(parse_range(line))
     return list(q)
 
-def parse_item(item_str: str) -> LineDataType:
+def parse_id(item_str: str) -> int:
     return int(item_str.strip())
+
+def parse_range(range_str: str) -> tuple[int, int]:
+    return cast(tuple[int, int], tuple(map(int, range_str.strip().split("-"))))
 
 
 def _combine_ranges(ranges: list[tuple[int, int]]) -> Iterable[tuple[int, int]]:
@@ -36,15 +37,15 @@ def _combine_ranges(ranges: list[tuple[int, int]]) -> Iterable[tuple[int, int]]:
         yield cur_lo, cur_hi
         yield last_lo, last_hi
 
-class Part1Solution(AbstractItemStreamingSolution[LineDataType, FileConfigType]):
+class Part1Solution(AbstractItemStreamingSolution[int, list[tuple[int, int]]]):
     def __init__(self) -> None:
         self._count = 0
         self._flattened_ranges = []
 
-    def load_config(self, config: FileConfigType) -> None:
+    def load_config(self, config: list[tuple[int, int]]) -> None:
         self._flattened_ranges = list(itertools.chain.from_iterable(_combine_ranges(config)))
 
-    def process_item(self, item: LineDataType) -> None:
+    def process_item(self, item: int) -> None:
         idx = bisect.bisect_left(self._flattened_ranges, item)
         if idx < len(self._flattened_ranges) and (self._flattened_ranges[idx] == item or idx % 2 == 1):
             self._count += 1
@@ -53,27 +54,24 @@ class Part1Solution(AbstractItemStreamingSolution[LineDataType, FileConfigType])
         return self._count
 
 
-class Part2Solution(AbstractItemStreamingSolution[LineDataType, FileConfigType]):
-    def __init__(self) -> None:
-        self._count = 0
-        self._config = []
-
-    # TODO: a bit clunky to use load_config for this. Should separate out part 2 to a different type of solver
-    def load_config(self, config: FileConfigType) -> None:
-        for lo, hi in _combine_ranges(config):
-            self._count += hi - lo + 1
-
-    def process_item(self, item: LineDataType) -> None:
-        ...
-
-    def result(self) -> int:
-        return self._count
+def solve_pt2(ranges: list[tuple[int, int]]) -> int:
+    return sum ((
+        hi - lo + 1
+        for lo, hi in _combine_ranges(ranges)
+    ))
 
 
 if __name__ == "__main__":
-    StreamingSolver[LineDataType, FileConfigType].construct_for_day(
+    StreamingSolver[int, list[tuple[int, int]]].construct_for_day(
         day_number=5,
-        file_config_parser=load_config,
-        item_parser=parse_item,
-        solutions=[Part1Solution, Part2Solution]
+        file_config_parser=parse_ranges,
+        item_parser=parse_id,
+        solutions=[Part1Solution]
     ).solve_all()
+
+    FileSolver[list[tuple[int, int]]].construct_for_day(
+        day_number=5,
+        loader=parse_ranges,
+        solutions=[solve_pt2],
+    ).solve_all()
+

@@ -63,6 +63,10 @@ def create_streaming_aggregating_solution(
     return ItemStreamingSolution
 
 
+class StopStreamingException(Exception):
+    pass
+
+
 class StreamingSolver(Generic[ItemDataType, FileConfigType]):
     def __init__(
         self,
@@ -104,6 +108,7 @@ class StreamingSolver(Generic[ItemDataType, FileConfigType]):
             self.solve_file(file_name)
 
     def solve_file(self, file_name: str) -> None:
+        self._log_func('=' * 80)
         self._log_func(f'Solving {file_name}:')
         solutions = [s() for s in self._solution_classes]
 
@@ -113,12 +118,15 @@ class StreamingSolver(Generic[ItemDataType, FileConfigType]):
                 for solution in solutions:
                     solution.load_config(file_config)
 
-            for item in self._stream_items_from_file(f):
-                self._process_item(item, solutions)
+            try:
+                for item in self._stream_items_from_file(f):
+                    self._process_item(item, solutions)
+            except StopStreamingException:
+                pass
 
         for i, solution in enumerate(solutions):
             result = solution.result()
-            self._log_func(f'\tSolution for part {i + 1}: {result}')
+            self._log_func(f'\tResult for {solution.__class__.__name__}: {result}')
         self._log_func(f'Done.\n')
 
     def _stream_items_from_file(self, file: TextIO, chunk_size=256) -> Iterable[str]:

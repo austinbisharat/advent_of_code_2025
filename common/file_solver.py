@@ -43,11 +43,11 @@ class FileSolver(Generic[T]):
         with open(file_name, 'r') as f:
             data = self._loader(f)
 
-        for i, solution in enumerate(self._solutions):
+        for solution in self._solutions:
             start_time = time.perf_counter()
             result = solution(data)
             end_time = time.perf_counter()
 
             execution_time = end_time - start_time
-            self._log_func(f'\tSolution for part {i + 1} (runtime={execution_time:0.2f}s): {result}')
+            self._log_func(f'\tResult for {solution.__name__} (runtime={execution_time:0.2f}s): {result}')
         self._log_func('')
