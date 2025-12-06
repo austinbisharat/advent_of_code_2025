@@ -1,4 +1,5 @@
 import enum
+import itertools
 import math
 from collections import deque
 from typing import TextIO, Iterable
@@ -23,39 +24,19 @@ def load_pt1(file: TextIO) -> list[MathProblemType]:
     ops = [Operator(op) for op in operators.split()]
     return list(zip(ops, transposed_nums))
 
-
-def _solve_individual_problem(problem: MathProblemType) -> int:
-    op, nums = problem
-    return sum(nums) if op == Operator.ADD else math.prod(nums)
-
-
 def load_pt2(file: TextIO) -> list[MathProblemType]:
     lines = file.readlines()
+    transposed_lines = itertools.zip_longest(*lines, fillvalue='')
 
-    max_line_length = max(len(l) for l in lines)
-
-    operators, numbers = lines[-1], lines[:-1]
     data = deque()
-
-    for col_idx in range(max_line_length):
-        if (
-            col_idx < len(operators)
-            and operators[col_idx] in Operator
-        ):
-            data.append((Operator(operators[col_idx]), deque()))
-
-        num = 0
-        for row in numbers:
-            if col_idx < len(row) and row[col_idx].isdigit():
-                num = num * 10 + int(row[col_idx])
-
-        if not num:
-            continue
-
-        if not data:
-            raise Exception('Trying to add number to unknown operator')
-
-        data[-1][1].append(num)
+    for line in transposed_lines:
+        *digits, op = line
+        if op in Operator:
+            data.append((Operator(op), deque()))
+        _, nums = data[-1]
+        num_str = ''.join(digits).strip()
+        if num_str:
+            nums.append(int(num_str))
 
     return list(data)
 
@@ -65,6 +46,11 @@ def solve_problems(data: list[MathProblemType]) -> int:
         _solve_individual_problem(problem)
         for problem in data
     )
+
+
+def _solve_individual_problem(problem: MathProblemType) -> int:
+    op, nums = problem
+    return sum(nums) if op == Operator.ADD else math.prod(nums)
 
 
 if __name__ == "__main__":
