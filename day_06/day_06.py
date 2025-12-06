@@ -23,9 +23,11 @@ def load_pt1(file: TextIO) -> list[MathProblemType]:
     ops = [Operator(op) for op in operators.split()]
     return list(zip(ops, transposed_nums))
 
+
 def _solve_individual_problem(problem: MathProblemType) -> int:
     op, nums = problem
     return sum(nums) if op == Operator.ADD else math.prod(nums)
+
 
 def load_pt2(file: TextIO) -> list[MathProblemType]:
     lines = file.readlines()
@@ -52,6 +54,7 @@ def load_pt2(file: TextIO) -> list[MathProblemType]:
 
         if not data:
             raise Exception('Trying to add number to unknown operator')
+
         data[-1][1].append(num)
 
     return list(data)
