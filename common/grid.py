@@ -132,6 +132,18 @@ class Grid(Generic[T]):
             for row_idx in range(self.height)
         )
 
+    def iter_points_in_column(self, column: int) -> Iterable[PositionType]:
+        return (
+            (row, column)
+            for row in range(self.height)
+        )
+
+    def iter_points_in_row(self, row: int) -> Iterable[PositionType]:
+        return (
+            (row, column)
+            for column in range(self.width)
+        )
+
     def __str__(self) -> str:
         return self.format_str()
 
