@@ -1,10 +1,16 @@
+import enum
 import math
 from collections import deque
-from typing import TextIO, Iterable, cast
+from typing import TextIO, Iterable
 from common.file_solver import FileSolver
-from common.grid import Grid
 
-MathProblemType = tuple[str, Iterable[int]]
+
+class Operator(enum.Enum):
+    ADD = '+'
+    MUL = '*'
+
+MathProblemType = tuple[Operator, Iterable[int]]
+
 
 def load_pt1(file: TextIO) -> list[MathProblemType]:
     lines = file.readlines()
@@ -13,12 +19,13 @@ def load_pt1(file: TextIO) -> list[MathProblemType]:
         [int(n) for n in row.strip().split()]
         for row in number_lines
     ]
-    transposed = zip(*number_grid)
-    return list(zip(operators.split(), transposed))
+    transposed_nums = zip(*number_grid)
+    ops = [Operator(op) for op in operators.split()]
+    return list(zip(ops, transposed_nums))
 
 def _solve_individual_problem(problem: MathProblemType) -> int:
     op, nums = problem
-    return sum(nums) if op == '+' else math.prod(nums)
+    return sum(nums) if op == Operator.ADD else math.prod(nums)
 
 def load_pt2(file: TextIO) -> list[MathProblemType]:
     lines = file.readlines()
@@ -29,16 +36,23 @@ def load_pt2(file: TextIO) -> list[MathProblemType]:
     data = deque()
 
     for col_idx in range(max_line_length):
-        op = operators[col_idx] if col_idx < len(operators) else None
-        if op in ('+', '*'):
-            data.append((op, deque()))
+        if (
+            col_idx < len(operators)
+            and operators[col_idx] in Operator
+        ):
+            data.append((Operator(operators[col_idx]), deque()))
 
         num = 0
         for row in numbers:
             if col_idx < len(row) and row[col_idx].isdigit():
                 num = num * 10 + int(row[col_idx])
-        if num:
-            data[-1][1].append(num)
+
+        if not num:
+            continue
+
+        if not data:
+            raise Exception('Trying to add number to unknown operator')
+        data[-1][1].append(num)
 
     return list(data)
 
