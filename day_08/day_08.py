@@ -4,6 +4,10 @@ import time
 from collections import defaultdict
 from typing import TextIO, cast, Iterable
 
+import numpy as np
+from scipy.spatial import KDTree
+from sortedcontainers import SortedSet
+
 from common.file_solver import FileSolver
 import heapq
 
@@ -30,6 +34,30 @@ def _compute_closest_connections(junctions: list[JunctionPointType]) -> list[Jun
         item = _compute_distance(l, r), l, r
         heapq.heappush(heap, item)
     return heap
+
+def _compute_n_closest_connections(junctions: list[JunctionPointType], n: int) -> SortedSet[JunctionDistType]:
+    closest_connections: SortedSet[JunctionDistType] = SortedSet()
+    kd_tree = KDTree(junctions)
+
+    upper_bound = float('inf')
+    for i, junction in enumerate(junctions):
+        distances, neighbors = kd_tree.query(x=[junction], k=len(junctions), distance_upper_bound=upper_bound)
+        for dist, n_idx in zip(distances[0], neighbors[0]):
+            if n_idx <= i:
+                continue
+
+            if math.isinf(dist) or dist > upper_bound:
+                break
+
+            neighbor = junctions[n_idx]
+            if len(closest_connections) < n:
+                closest_connections.add((dist, junction, neighbor))
+            elif closest_connections[-1][0] > dist:
+                closest_connections.remove(closest_connections[-1])
+                closest_connections.add((dist, junction, neighbor))
+                upper_bound = closest_connections[-1][0]
+
+    return closest_connections
 
 
 class Circuits:
@@ -86,6 +114,16 @@ def solve_pt1(data: LoadedDataType) -> int:
     res = circuits.get_top_n_largest_sets(3)
     return math.prod(res)
 
+def solve_pt1_kd(data: LoadedDataType) -> int:
+    num_connections, junctions = data
+    closest_connections = _compute_n_closest_connections(junctions, num_connections)
+
+    circuits = Circuits(junctions)
+    for dist, l, r in closest_connections:
+        circuits.merge(l, r)
+    res = circuits.get_top_n_largest_sets(3)
+    return math.prod(res)
+
 
 def solve_pt2(data: LoadedDataType) -> int:
     num_connections, junctions = data
@@ -106,5 +144,9 @@ if __name__ == "__main__":
     FileSolver[LoadedDataType].construct_for_day(
         day_number=8,
         loader=load,
-        solutions=[solve_pt1, solve_pt2]
+        solutions=[
+            solve_pt1,
+            solve_pt1_kd,
+            solve_pt2,
+        ]
     ).solve_all()
