@@ -62,7 +62,7 @@ class Part2Solution(AbstractItemStreamingSolution[LineDataType, FileConfigType])
 
 
 if __name__ == "__main__":
-    StreamingSolver[LineDataType].construct_for_day(
+    StreamingSolver[LineDataType, FileConfigType].construct_for_day(
         day_number={day_num},
         item_parser=parse_item,
         solutions=[Part1Solution, Part2Solution]
@@ -112,8 +112,8 @@ def construct_dir(
 ) -> None:
     directory = BASE_DIR / f"day_{day_number:02d}"
     directory.mkdir(exist_ok=True)
-    open(directory / f'input_{day_number:02d}.txt', option).close()
-    open(directory / f'sample_{day_number:02d}.txt', option).close()
+    open(directory / f'input_{day_number:02d}.txt', 'x').close()
+    open(directory / f'sample_{day_number:02d}.txt', 'x').close()
     with open(directory / f'day_{day_number:02d}.py', option) as main_file:
         main_file.write(template.format(day_num=day_number))
 
