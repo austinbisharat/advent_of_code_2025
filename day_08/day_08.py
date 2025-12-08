@@ -1,12 +1,16 @@
 import itertools
 import math
+import time
 from collections import defaultdict
-from typing import TextIO, cast
+from typing import TextIO, cast, Iterable
+
 from common.file_solver import FileSolver
 import heapq
 
 JunctionPointType = tuple[int, int, int]
 LoadedDataType = tuple[int, list[JunctionPointType]]
+
+JunctionDistType = tuple[float, JunctionPointType, JunctionPointType]
 
 
 def load(file: TextIO) -> LoadedDataType:
@@ -15,28 +19,73 @@ def load(file: TextIO) -> LoadedDataType:
         for line in file
     ]
 
-def _compute_distance(l: JunctionPointType, r: JunctionPointType) -> float:
-    return math.sqrt(sum((l_i - r_i) ** 2 for l_i, r_i in zip(l, r)))
 
-def solve_pt1(data: LoadedDataType) -> int:
-    num_connections, junctions = data
+def _compute_distance(l: JunctionPointType, r: JunctionPointType) -> float:
+    return sum((l_i - r_i) ** 2 for l_i, r_i in zip(l, r))
+
+
+def _compute_closest_connections(junctions: list[JunctionPointType]) -> list[JunctionDistType]:
     heap = list()
     for l, r in itertools.combinations(junctions, 2):
         item = _compute_distance(l, r), l, r
         heapq.heappush(heap, item)
+    return heap
 
-    junction_to_circuit = defaultdict(set)
-    for _ in range(num_connections):
-        dist, l, r = heapq.heappop(heap)
-        new_circuit = junction_to_circuit[l].union(junction_to_circuit[r])
-        new_circuit.add(l)
-        new_circuit.add(r)
-        for junction in new_circuit:
-            junction_to_circuit[junction] = new_circuit
 
-    circuit_lens = {id(circuit): len(circuit) for circuit in junction_to_circuit.values()}
-    lens = sorted(circuit_lens.values(), reverse=True)
-    return math.prod(lens[:3])
+class Circuits:
+    def __init__(self, junctions: list[JunctionPointType]) -> None:
+        self._junction_to_parent = {
+            j: j for j in junctions
+        }
+        self._parent_to_size = {
+            j: 1 for j in junctions
+        }
+
+    def merge(self, l: JunctionPointType, r: JunctionPointType) -> int:
+        l_parent = self._find_parent(l)
+        r_parent = self._find_parent(r)
+
+        if l_parent == r_parent:
+            return self._parent_to_size[r_parent]
+
+        if self._parent_to_size[l_parent] > self._parent_to_size[r_parent]:
+            l_parent, r_parent = r_parent, l_parent
+
+        self._junction_to_parent[l_parent] = r_parent
+        self._find_parent(l_parent)
+        self._parent_to_size[r_parent] += self._parent_to_size[l_parent]
+        return self._parent_to_size[r_parent]
+
+    def _find_parent(self, junction: JunctionPointType) -> JunctionPointType:
+        cur = junction
+        while self._junction_to_parent[cur] != cur:
+            cur = self._junction_to_parent[cur]
+
+        root = cur
+        cur = junction
+        while self._junction_to_parent[cur] != root:
+            parent = self._junction_to_parent[cur]
+            self._junction_to_parent[cur] = root
+            cur = parent
+        return root
+
+    def get_top_n_largest_sets(self, n: int) -> Iterable[int]:
+        parents = set(self._junction_to_parent.values())
+        heap = [self._parent_to_size[p] for p in parents]
+        heapq.heapify(heap)
+        return heapq.nlargest(n, heap)
+
+
+def solve_pt1(data: LoadedDataType) -> int:
+    num_connections, junctions = data
+    heap = _compute_closest_connections(junctions)
+
+    circuits = Circuits(junctions)
+    for dist, l, r in heapq.nsmallest(num_connections, heap):
+        circuits.merge(l, r)
+    res = circuits.get_top_n_largest_sets(3)
+    return math.prod(res)
+
 
 def solve_pt2(data: LoadedDataType) -> int:
     num_connections, junctions = data
@@ -45,18 +94,13 @@ def solve_pt2(data: LoadedDataType) -> int:
         item = _compute_distance(l, r), l, r
         heapq.heappush(heap, item)
 
-    junction_to_circuit = defaultdict(set)
+    circuits = Circuits(junctions)
+    num_connections = 0
     while True:
-        dist, l, r = heapq.heappop(heap)
-        new_circuit = junction_to_circuit[l].union(junction_to_circuit[r])
-        new_circuit.add(l)
-        new_circuit.add(r)
-        if len(new_circuit) == len(junctions):
+        _, l, r = heapq.heappop(heap)
+        num_connections += 1
+        if len(junctions) == circuits.merge(l, r):
             return l[0] * r[0]
-
-        for junction in new_circuit:
-            junction_to_circuit[junction] = new_circuit
-
 
 if __name__ == "__main__":
     FileSolver[LoadedDataType].construct_for_day(
