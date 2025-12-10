@@ -21,7 +21,7 @@ PositionType = tuple[int, int]
 
 
 class Direction(enum.Enum):
-    # Sensitive to order -- must
+    # Sensitive to order
     NORTH = (-1, 0)
     NORTH_EAST = (-1, 1)
     EAST = (0, 1)
@@ -257,6 +257,9 @@ def load_digit_grid(file: TextIO) -> Grid[int]:
 def scale_relative_point(point: (int, int), scale: int) -> (int, int):
     return tuple(scale * cord for cord in point)
 
+def inverse_scale_relative_point(point: (int, int), scale: int) -> (int, int):
+    return tuple(cord // scale for cord in point)
+
 
 def add_relative_point(point: tuple[int, int], other_point: tuple[int, int]) -> tuple[int, int]:
     return cast(tuple[int, int], tuple(x + y for x, y in zip(point, other_point)))
@@ -272,6 +275,27 @@ def rotate_90(d: Direction, turns: int = 1) -> 'Direction':
         raise IndexError(f'Invalid direction {d}')
     return CARDINAL_DIRS[(idx + turns) % len(CARDINAL_DIRS)]
 
+def get_cardinal_dir_between_points(point: PositionType, next_point: PositionType) -> Direction:
+    diff = subtract_relative_point(next_point, point)
+    scale = max(abs(val) for val in diff)
+    scaled_dir = inverse_scale_relative_point(diff, scale)
+    return Direction(scaled_dir)
+
+def get_turns_between_directions(start_dir: Direction, end_dir: Direction) -> int:
+    start_idx = CARDINAL_DIRS.index(start_dir)
+    if start_idx == -1:
+        raise IndexError(f'Invalid start direction {start_dir}')
+
+    end_idx = CARDINAL_DIRS.index(end_dir)
+    if end_idx == -1:
+        raise IndexError(f'Invalid end direction {end_dir}')
+
+    if (end_idx - start_idx) % 4 == 3:
+        return -1
+    elif (end_idx - start_idx) % 4 == 1:
+        return 1
+    else:
+        raise IndexError(f'Invalid turns {start_dir} {end_dir}')
 
 def manhattan_distance(a: PositionType, b: PositionType) -> int:
     return sum(abs(a_i - b_i) for a_i, b_i in zip(a, b))
