@@ -1,8 +1,10 @@
 import dataclasses
+import heapq
 import itertools
 import math
 import sys
 from collections import defaultdict
+from functools import lru_cache
 
 from common.streaming_solver import StreamingSolver, create_summing_solution
 
@@ -60,30 +62,60 @@ def part_one(data: MachineData) -> int:
     return res
 
 
+@dataclasses.dataclass(order=True)
+class _SearchNode:
+    presses_so_far: int
+    neg_gcd: int
+    joltage_requirements: tuple[int, ...]
+
+
+def _find_nearest_divisible_joltage_req(
+    current_joltage_requirements: tuple[int, ...],
+    machine: MachineData,
+) -> _SearchNode:
+    heap = [_SearchNode(
+        presses_so_far=0,
+        neg_gcd=-1 * math.gcd(*current_joltage_requirements),
+        joltage_requirements=current_joltage_requirements
+    )]
+
+    while heap:
+        node = heapq.heappop(heap)
+        if node.neg_gcd < -1 or all(j == 0 for j in node.joltage_requirements):
+            return node
+
+        for b in machine.buttons:
+            next_joltage_requirements = _press_button(node.joltage_requirements, b)
+            if any(j < 0 for j in next_joltage_requirements):
+                continue
+            heapq.heappush(heap, _SearchNode(
+                presses_so_far=node.presses_so_far + 1,
+                neg_gcd=-1 * math.gcd(*next_joltage_requirements),
+                joltage_requirements=next_joltage_requirements
+            ))
+
+    raise ValueError('Should never happen')
+
+
 def part_two(data: MachineData) -> int:
-    memo: dict[tuple[int, ...], int] = defaultdict(lambda: sys.maxsize)
-
+    @lru_cache
     def _count_minimal_button_presses(current_joltage_requirements: tuple[int, ...]) -> int:
-        if all(j == 0 for j in current_joltage_requirements):
-            return 0
-
         if any(j < 0 for j in current_joltage_requirements):
             return sys.maxsize
 
-        if current_joltage_requirements in memo:
-            return memo[current_joltage_requirements]
+        node = _find_nearest_divisible_joltage_req(current_joltage_requirements, data)
+        if all(j == 0 for j in node.joltage_requirements):
+            return node.presses_so_far
 
-        res = min((
-            1 + _count_minimal_button_presses(_press_button(current_joltage_requirements, b))
-            for b in data.buttons
-        ))
-        memo[current_joltage_requirements] = res
-        return res
+        scale = -1 * node.neg_gcd
+        current_joltage_requirements = tuple(j // scale for j in node.joltage_requirements)
+        return node.presses_so_far + scale * _count_minimal_button_presses(current_joltage_requirements)
 
-    scale = math.gcd(*data.joltage_requirements)
-    joltage_requirements = tuple(j // scale for j in data.joltage_requirements)
-    res = _count_minimal_button_presses(joltage_requirements) * scale
-    print(res)
+    try:
+        res = _count_minimal_button_presses(tuple(data.joltage_requirements))
+    except ValueError:
+        res = -1
+    print(f'cs: {res}')
     return res
 
 
@@ -111,7 +143,10 @@ def part_two_pl(data: MachineData) -> int:
     status = problem.solve(pl.PULP_CBC_CMD(msg=0))
     if status != 1:
         raise Exception('No solution')
-    return int(pl.value(problem.objective))
+
+    res = int(pl.value(problem.objective))
+    print(f'pl: {res}\n')
+    return res
 
 if __name__ == "__main__":
     StreamingSolver[MachineData, None].construct_for_day(
@@ -119,6 +154,7 @@ if __name__ == "__main__":
         item_parser=parse_item,
         solutions=[
             create_summing_solution(part_one),
+            create_summing_solution(part_two),
             create_summing_solution(part_two_pl)
         ]
     ).solve_all()
