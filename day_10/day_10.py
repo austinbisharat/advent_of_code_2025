@@ -34,12 +34,14 @@ def parse_item(item_str: str) -> MachineData:
         ]
     )
 
+
 def _parse_indicator_lights(indicator: str) -> int:
     return sum(
         1 << i
         for i, char in enumerate(indicator)
         if char == '#'
     )
+
 
 def part_one(data: MachineData) -> int:
     bitwise_buttons = [
@@ -62,68 +64,42 @@ def part_one(data: MachineData) -> int:
     return res
 
 
-@dataclasses.dataclass(order=True)
-class _SearchNode:
-    presses_so_far: int
-    neg_gcd: int
-    joltage_requirements: tuple[int, ...]
-
-
-def _find_nearest_divisible_joltage_req(
-    current_joltage_requirements: tuple[int, ...],
-    machine: MachineData,
-) -> _SearchNode:
-    heap = [_SearchNode(
-        presses_so_far=0,
-        neg_gcd=-1 * math.gcd(*current_joltage_requirements),
-        joltage_requirements=current_joltage_requirements
-    )]
-
-    while heap:
-        node = heapq.heappop(heap)
-        if node.neg_gcd < -1 or all(j == 0 for j in node.joltage_requirements):
-            return node
-
-        for b in machine.buttons:
-            next_joltage_requirements = _press_button(node.joltage_requirements, b)
-            if any(j < 0 for j in next_joltage_requirements):
-                continue
-            heapq.heappush(heap, _SearchNode(
-                presses_so_far=node.presses_so_far + 1,
-                neg_gcd=-1 * math.gcd(*next_joltage_requirements),
-                joltage_requirements=next_joltage_requirements
-            ))
-
-    raise ValueError('Should never happen')
-
-
 def part_two(data: MachineData) -> int:
+    minimal_button_combos: dict[tuple[int, ...], int] = {}
+    for num_button_presses in range(len(data.buttons)+1):
+        for button_combo in itertools.combinations(data.buttons, num_button_presses):
+            combined_button_diff = tuple(
+                sum(1 for b in button_combo if i in b)
+                for i in range(len(data.joltage_requirements))
+            )
+            if combined_button_diff not in minimal_button_combos:
+                minimal_button_combos[combined_button_diff] = num_button_presses
+
     @lru_cache
     def _count_minimal_button_presses(current_joltage_requirements: tuple[int, ...]) -> int:
+        if all(j == 0 for j in current_joltage_requirements):
+            return 0
+
         if any(j < 0 for j in current_joltage_requirements):
             return sys.maxsize
 
-        node = _find_nearest_divisible_joltage_req(current_joltage_requirements, data)
-        if all(j == 0 for j in node.joltage_requirements):
-            return node.presses_so_far
+        min_so_far = sys.maxsize
+        for combined_button_diff, num_presses in minimal_button_combos.items():
+            next_joltage_requirements = tuple(
+                j_req - j_diff
+                for j_req, j_diff in zip(current_joltage_requirements, combined_button_diff)
+            )
 
-        scale = -1 * node.neg_gcd
-        current_joltage_requirements = tuple(j // scale for j in node.joltage_requirements)
-        return node.presses_so_far + scale * _count_minimal_button_presses(current_joltage_requirements)
+            gcd = math.gcd(*next_joltage_requirements)
+            if gcd == 0:
+                min_so_far = min(min_so_far, num_presses)
+            elif gcd > 1:
+                scaled = tuple(j // gcd for j in next_joltage_requirements)
+                min_so_far = min(min_so_far, num_presses + gcd * _count_minimal_button_presses(scaled))
+        return min_so_far
 
-    try:
-        res = _count_minimal_button_presses(tuple(data.joltage_requirements))
-    except ValueError:
-        res = -1
-    print(f'cs: {res}')
-    return res
+    return _count_minimal_button_presses(tuple(data.joltage_requirements))
 
-
-def _press_button(current_joltage: tuple[int, ...], button: list[int], times: int = 1) -> tuple[int, ...]:
-    cpy = list(current_joltage)
-    for b in button:
-        cpy[b] -= times
-    return tuple(cpy)
 
 def part_two_pl(data: MachineData) -> int:
     problem = pl.LpProblem('machine_data', pl.LpMinimize)
@@ -145,7 +121,6 @@ def part_two_pl(data: MachineData) -> int:
         raise Exception('No solution')
 
     res = int(pl.value(problem.objective))
-    print(f'pl: {res}\n')
     return res
 
 if __name__ == "__main__":
