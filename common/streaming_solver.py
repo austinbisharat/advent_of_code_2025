@@ -27,7 +27,16 @@ class AbstractItemStreamingSolution(abc.ABC, Generic[ItemDataType, FileConfigTyp
 
 def create_summing_solution(
     item_processor: Callable[[ItemDataType], Number]
-) -> Type[AbstractItemStreamingSolution[ItemDataType, None]]:
+) -> Type[AbstractItemStreamingSolution[ItemDataType, FileConfigType]]:
+    return create_streaming_aggregating_solution(
+        item_processor=lambda item, file_config: item_processor(item),
+        reducer_func=lambda result, item_result: result + item_result,
+        initial_result=0,
+    )
+
+def create_summing_solution_with_file_config(
+    item_processor: Callable[[ItemDataType, FileConfigType], Number]
+) -> Type[AbstractItemStreamingSolution[ItemDataType, FileConfigType]]:
     return create_streaming_aggregating_solution(
         item_processor=item_processor,
         reducer_func=lambda result, item_result: result + item_result,
@@ -37,7 +46,16 @@ def create_summing_solution(
 
 def create_product_solution(
     item_processor: Callable[[ItemDataType], Number]
-) -> Type[AbstractItemStreamingSolution[ItemDataType, None]]:
+) -> Type[AbstractItemStreamingSolution[ItemDataType, FileConfigType]]:
+    return create_streaming_aggregating_solution(
+        item_processor=lambda item, file_config: item_processor(item),
+        reducer_func=lambda result, item_result: result * item_result,
+        initial_result=1,
+    )
+
+def create_product_solution_with_file_config(
+    item_processor: Callable[[ItemDataType, FileConfigType], Number]
+) -> Type[AbstractItemStreamingSolution[ItemDataType, FileConfigType]]:
     return create_streaming_aggregating_solution(
         item_processor=item_processor,
         reducer_func=lambda result, item_result: result * item_result,
@@ -46,16 +64,20 @@ def create_product_solution(
 
 
 def create_streaming_aggregating_solution(
-    item_processor: Callable[[ItemDataType], ItemOutputType],
+    item_processor: Callable[[ItemDataType, FileConfigType], ItemOutputType],
     reducer_func: Callable[[ResultType, ItemOutputType], ResultType],
     initial_result: ResultType,
-) -> Type[AbstractItemStreamingSolution[ItemDataType, None]]:
-    class ItemStreamingSolution(AbstractItemStreamingSolution[ItemDataType, None]):
+) -> Type[AbstractItemStreamingSolution[ItemDataType, FileConfigType]]:
+    class ItemStreamingSolution(AbstractItemStreamingSolution[ItemDataType, FileConfigType]):
         def __init__(self) -> None:
             self._result = initial_result
+            self._config: Optional[FileConfigType] = None
+
+        def load_config(self, config: FileConfigType) -> None:
+            self._config = config
 
         def process_item(self, item: ItemDataType) -> None:
-            self._result = reducer_func(self._result, item_processor(item))
+            self._result = reducer_func(self._result, item_processor(item, self._config))
 
         def result(self) -> int:
             return self._result
